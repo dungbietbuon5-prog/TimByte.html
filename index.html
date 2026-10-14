@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BYTE FINDER</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', monospace; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: #05060a; color: #e0e0e0; min-height: 100vh; padding: 12px;
+    background-image: radial-gradient(circle at 50% 0%, #0a1a22 0%, #05060a 60%);
+  }
+  .box {
+    width: 100%; max-width: 620px; margin: 0 auto;
+    background: #0a0d14; border: 1px solid #1f3a4a;
+    border-radius: 14px; padding: 16px;
+    box-shadow: 0 0 40px rgba(0,255,255,0.1);
+  }
+  h1 {
+    text-align: center; font-size: 18px; letter-spacing: 2px; margin-bottom: 4px;
+    background: linear-gradient(90deg, #7df9ff, #ff00ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    font-weight: 900;
+  }
+  .sub { text-align: center; font-size: 10px; color: #666; margin-bottom: 14px; letter-spacing: 1px; }
+  .section { border: 1px solid #1a2a35; border-radius: 10px; padding: 12px; margin-bottom: 12px; background: #0d0d0d; }
+  .section-title { font-size: 11px; font-weight: 700; color: #7df9ff; margin-bottom: 10px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .file-input-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; z-index: -1; pointer-events: none; }
+  .file-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, #7df9ff, #1a6f8a);
+    color: #000; border: none; border-radius: 18px;
+    padding: 10px 18px; font-size: 12px; font-weight: 900;
+    letter-spacing: 0.5px; cursor: pointer; user-select: none;
+    transition: transform 0.1s;
+  }
+  .file-label:active { transform: scale(0.96); }
+  .file-label::before { content: '📁'; font-size: 14px; }
+  .file-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .file-name { font-size: 10px; color: #888; flex: 1; min-width: 100px; padding: 6px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-name.has-file { color: #00ff88; }
+  .input-text {
+    width: 100%; padding: 12px 14px;
+    background: #050505; border: 1px solid #1f3a4a;
+    border-radius: 8px; color: #e0e0e0;
+    font-size: 13px; outline: none;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+  }
+  .input-text:focus { border-color: #7df9ff; box-shadow: 0 0 0 3px rgba(125,249,255,0.1); }
+  .btn {
+    width: 100%; padding: 13px; border-radius: 8px;
+    font-size: 13px; font-weight: 900; letter-spacing: 1.5px;
+    cursor: pointer; border: 1px solid #1f3a4a;
+    background: #0a0a0a; color: #fff;
+    font-family: 'Courier New', monospace; transition: transform 0.1s;
+    margin-top: 8px;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: linear-gradient(135deg, #a0f0ff, #7df9ff); color: #000; border: none; box-shadow: 0 0 20px rgba(160,240,255,0.4); }
+  .btn-primary:disabled { background: #1f2d3a; color: #555; box-shadow: none; cursor: not-allowed; }
+  .btn-vip { background: linear-gradient(135deg, #ff00ff, #7df9ff); color: #000; border: none; box-shadow: 0 0 20px rgba(255,0,255,0.4); }
+  .btn-vip:disabled { background: #1f2d3a; color: #555; box-shadow: none; cursor: not-allowed; }
+  .btn-copy {
+    background: linear-gradient(135deg, #00ff88, #00a85a);
+    color: #000; border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 10px; font-weight: 900;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    margin-top: 6px;
+    font-family: 'Courier New', monospace;
+  }
+  .btn-copy:active { transform: scale(0.96); }
+  .btn-copy.copied { background: linear-gradient(135deg, #ffaa00, #cc8800); }
+
+  .results {
+    background: #000; border: 1px solid #1f3a4a; border-radius: 8px;
+    padding: 10px; min-height: 200px; max-height: 500px; overflow-y: auto;
+    font-size: 11px; line-height: 1.6;
+  }
+  .hit-block {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #1f3a4a;
+  }
+  .hit-block:last-child { border-bottom: none; }
+  .hit-header {
+    color: #7df9ff;
+    font-weight: 900;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .hit-header .offset { color: #ffaa00; }
+  .hit-hex {
+    background: #050505;
+    border: 1px solid #1f3a4a;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 11px;
+    line-height: 1.8;
+    letter-spacing: 1px;
+    word-break: break-all;
+    color: #00ff88;
+  }
+  .hit-hex .highlight {
+    background: #ff2244;
+    color: #fff;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-weight: 900;
+  }
+  .hit-hex .dim { color: #4a5568; }
+  .hit-utf8 {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #888;
+  }
+  .hit-utf8 b { color: #7df9ff; }
+  .empty { color: #666; text-align: center; padding: 30px 0; font-size: 11px; }
+  .filter-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 6px 12px; border-radius: 16px;
+    border: 1px solid #1f3a4a; background: #:0a0a0a;
+     color: #888; font10-sizepx; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.5px;
+    font-family: 'Courier New', monospace;
+  }
+  .filter-btn.active {
+    background: linear-gradient(135deg, #7df9ff, #1a6f8a);
+    color: #000; border-color: #7df9ff;
+  }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .stat {
+    background: #000; border: 1px solid #1f3a4a; border-radius: 8px;
+    padding: 10px; text-align: center;
+  }
+  .stat-label { font-size: 9px; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
+  .stat-val { font-size: 16px; font-weight: 900; color: #7df9ff; }
+  .toast {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: rgba(8,10,14,0.98);
+    border: 1px solid #00ff88;
+    border-radius: 24px;
+    padding: 10px 22px;
+    font-size: 12.5px;
+    color: #00ff88;
+    box-shadow: 0 0 22px rgba(0,255,136,0.5);
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: #1f3a4a; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>BYTE FINDER</h1>
+  <div class="sub">TÌM BYTE • SAO CHÉP • XUẤT KẾT QUẢ</div>
+
+  <div class="section">
+    <div class="section-title">1. CHỌN FILE</div>
+    <div class="file-row">
+      <label class="file-label" for="fi">CHỌN TỆP</label>
+      <input type="file" id="fi" class="file-input-hidden" accept="*/*">
+      <span class="file-name" id="fname">chưa chọn tệp nào</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2. NHẬP TÊN BONE CẦN TÌM</div>
+    <input class="input-text" id="searchInput" placeholder="bone_Neck, bone_Head, bone_Spine...">
+    <button class="btn btn-primary" id="btnFind" disabled>TÌM BYTE</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3. CÀI ĐẶT HIỂN THỊ</div>
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" data-range="16">±16 byte</button>
+      <button class="filter-btn" data-range="32">±32 byte</button>
+      <button class="filter-btn" data-range="64">±64 byte</button>
+      <button class="filter-btn" data-range="128">±128 byte</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">4. KẾT QUẢ</div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">TỔNG VỊ TRÍ</div><div class="stat-val" id="totalHits">—</div></div>
+      <div class="stat"><div class="stat-label">ĐÃ HIỂN THỊ</div><div class="stat-val" id="shownHits">—</div></div>
+    </div>
+    <div class="results" id="results">
+      <div class="empty">Sẵn sàng... Chọn file và nhập tên bone.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">5. XUẤT KẾT QUẢ</div>
+    <button class="btn btn-vip" id="btnExport" disabled>XUẤT TXT</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let buffer = null;
+let fileName = '';
+let allHits = [];
+let displayRange = 16;
+
+const fi = document.getElementById('fi');
+const fname = document.getElementById('fname');
+const searchInput = document.getElementById('searchInput');
+const btnFind = document.getElementById('btnFind');
+const btnExport = document.getElementById('btnExport');
+const resultsEl = document.getElementById('results');
+const totalHitsEl = document.getElementById('totalHits');
+const shownHitsEl = document.getElementById('shownHits');
+const filterRow = document.getElementById('filterRow');
+const toastEl = document.getElementById('toast');
+
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(function() { toastEl.classList.remove('show'); }, 1500);
+}
+
+// ==== COPY CLIPBOARD ====
+function copyText(text, btnEl) {
+  // Thử navigator.clipboard trước (modern)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showCopyFeedback(btnEl);
+    }).catch(function() {
+      fallbackCopy(text, btnEl);
+    });
+  } else {
+    fallbackCopy(text, btnEl);
+  }
+}
+
+function fallbackCopy(text, btnEl) {
+  // Fallback: dùng textarea ẩn + execCommand
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '0';
+  ta.setAttribute('readonly', '');
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  try {
+    const ok = document.execCommand('copy');
+    if (ok) showCopyFeedback(btnEl);
+    else showToast('Không copy được. Long-press để chọn thủ công.');
+  } catch (e) {
+    showToast('Lỗi copy: ' + e.message);
+  }
+  document.body.removeChild(ta);
+}
+
+function showCopyFeedback(btnEl) {
+  if (btnEl) {
+    const orig = btnEl.textContent;
+    btnEl.textContent = '✓ ĐÃ COPY';
+    btnEl.classList.add('copied');
+    setTimeout(function() {
+      btnEl.textContent = orig;
+      btnEl.classList.remove('copied');
+    }, 1200);
+  }
+  showToast('Đã copy vào clipboard');
+}
+
+// ==== TOGGLE RANGE ====
+filterRow.addEventListener('click', function(e) {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  filterRow.querySelectorAll('.filter-btn').forEach(function(x) { x.classList.remove('active'); });
+  btn.classList.add('active');
+  displayRange = parseInt(btn.dataset.range);
+  renderResults();
+});
+
+// ==== FILE LOAD ====
+fi.addEventListener('change', function(e) {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  fileName = f.name;
+  fname.textContent = f.name;
+  fname.classList.add('has-file');
+
+  const r = new FileReader();
+  r.onload = function(ev) {
+    buffer = ev.target.result;
+    btnFind.disabled = false;
+    resultsEl.innerHTML = '<div class="empty">✅ Đã nạp file. Nhập tên bone để tìm.</div>';
+    totalHitsEl.textContent = '—';
+    shownHitsEl.textContent = '—';
+    allHits = [];
+  };
+  r.onerror = function() {
+    resultsEl.innerHTML = '<div class="empty" style="color:#ff4444">❌ LỖI đọc file.</div>';
+  };
+  r.readAsArrayBuffer(f);
+});
+
+fi.addEventListener('click', function(e) { e.target.value = ''; });
+
+searchInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') findBytes();
+});
+
+function toBytes(s) { return new TextEncoder().encode(s); }
+
+function findAllBytes(arr, w) {
+  const L = w.length;
+  const hits = [];
+  if (L === 0) return hits;
+  for (let i = 0; i + L <= arr.length; i++) {
+    if (arr[i] !== w[0]) continue;
+    let ok = true;
+    for (let j = 1; j < L; j++) {
+      if (arr[i+j] !== w[j]) { ok = false; break; }
+    }
+    if (!ok) continue;
+    hits.push(i);
+  }
+  return hits;
+}
+
+function byteToHex(b) { return b.toString(16).toUpperCase().padStart(2, '0'); }
+function byteToChar(b) { return (b >= 32 && b < 127) ? String.fromCharCode(b) : '.'; }
+
+btnFind.addEventListener('click', findBytes);
+
+function findBytes() {
+  if (!buffer) return;
+  const query = searchInput.value.trim();
+  if (!query) {
+    resultsEl.innerHTML = '<div class="empty" style="color:#ffaa00">Nhập tên bone cần tìm.</div>';
+    return;
+  }
+
+  const arr = new Uint8Array(buffer);
+  const searchBytes = toBytes(query);
+  const hits = findAllBytes(arr, searchBytes);
+
+  allHits = [];
+  for (let h = 0; h < hits.length; h++) {
+    const offset = hits[h];
+    allHits.push({
+      boneName: query,
+      offset: offset,
+      endOffset: offset + searchBytes.length,
+      length: searchBytes.length
+    });
+  }
+
+  totalHitsEl.textContent = allHits.length;
+  btnExport.disabled = allHits.length === 0;
+
+  if (allHits.length === 0) {
+    resultsEl.innerHTML = '<div class="empty" style="color:#ffaa00">Không tìm thấy "' + query + '" trong file.</div>';
+    shownHitsEl.textContent = '0';
+    return;
+  }
+
+  renderResults();
+}
+
+// ==== RENDER ====
+function renderResults() {
+  if (!buffer || allHits.length === 0) return;
+  const arr = new Uint8Array(buffer);
+
+  let html = '';
+  const maxShow = 200;
+  const showCount = Math.min(allHits.length, maxShow);
+
+  for (let h = 0; h < showCount; h++) {
+    const hit = allHits[h];
+    const start = Math.max(0, hit.offset - displayRange);
+    const end = Math.min(arr.length, hit.endOffset + displayRange);
+
+    // Tạo chuỗi hex full (để copy)
+    let hexFull = '';
+    for (let i = start; i < end; i++) {
+      hexFull += byteToHex(arr[i]);
+      if ((i - start + 1) % 16 === 0 && i < end - 1) hexFull += '\n';
+    }
+
+    // Tạo chuỗi hex chỉ phần khớp (byte gốc của bone)
+    let hexBone = '';
+    for (let i = hit.offset; i < hit.endOffset; i++) {
+      hexBone += byteToHex(arr[i]);
+    }
+
+    // Tạo chuỗi UTF-8
+    let utf8Str = '';
+    for (let i = start; i < end; i++) utf8Str += byteToChar(arr[i]);
+
+    html += '<div class="hit-block">';
+    html += '<div class="hit-header">#' + (h+1) + ' — offset <span class="offset">0x' + hit.offset.toString(16).toUpperCase().padStart(8,'0') + '</span> (' + hit.offset + ') — dài ' + hit.length + ' byte</div>';
+
+    // Hex dump hiển thị
+    html += '<div class="hit-hex">';
+    for (let i = start; i < end; i++) {
+      const isHit = i >= hit.offset && i < hit.endOffset;
+      const hexStr = byteToHex(arr[i]);
+      if (isHit) {
+        html += '<span class="highlight">' + hexStr + '</span> ';
+      } else {
+        html += '<span class="dim">' + hexStr + '</span> ';
+      }
+      if ((i - start + 1) % 16 === 0 && i < end - 1) html += '<br>';
+    }
+    html += '</div>';
+
+    // UTF-8
+    html += '<div class="hit-utf8">UTF-8: <b>' + escapeHtml(utf8Str) + '</b></div>';
+
+    // Buttons copy
+    html += '<button class="btn-copy" data-copy="' + escapeAttr(hexBone) + '">📋 COPY BYTE BONE</button> ';
+    html += '<button class="btn-copy" data-copy="' + escapeAttr(hexFull) + '">📋 COPY FULL DÒNG</button> ';
+    html += '<button class="btn-copy" data-copy="' + escapeAttr(utf8Str) + '">📋 COPY UTF-8</button>';
+
+    html += '</div>';
+  }
+
+  if (allHits.length > maxShow) {
+    html += '<div class="empty">... và ' + (allHits.length - maxShow) + ' vị trí nữa</div>';
+  }
+
+  resultsEl.innerHTML = html;
+  shownHitsEl.textContent = showCount;
+
+  // Gắn sự kiện copy cho tất cả nút
+  resultsEl.querySelectorAll('.btn-copy').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const text = btn.getAttribute('data-copy');
+      copyText(text, btn);
+    });
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeAttr(s) {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ==== XUẤT TXT ====
+btnExport.addEventListener('click', function() {
+  if (allHits.length === 0) return;
+  const arr = new Uint8Array(buffer);
+
+  let out = '';
+  out += '═══════════════════════════════════════\n';
+  out += 'BYTE FINDER REPORT\n';
+  out += 'FILE: ' + fileName + '\n';
+  out += 'BYTE: ' + allHits[0].boneName + '\n';
+  out += 'SỐ VỊ TRÍ: ' + allHits.length + '\n';
+  out += '═══════════════════════════════════════\n\n';
+
+  for (let h = 0; h < allHits.length; h++) {
+    const hit = allHits[h];
+    const start = Math.max(0, hit.offset - displayRange);
+    const end = Math.min(arr.length, hit.endOffset + displayRange);
+
+    out += '#' + (h+1) + ' — offset 0x' + hit.offset.toString(16).toUpperCase().padStart(8,'0') + ' (' + hit.offset + ')\n';
+
+    // Chỉ byte bone
+    let hexBone = '';
+    for (let i = hit.offset; i < hit.endOffset; i++) hexBone += byteToHex(arr[i]);
+    out += '  BYTE BONE: ' + hexBone + '\n';
+
+    // Full hex dump
+    out += '  HEX DUMP:\n  ';
+    for (let i = start; i < end; i++) {
+      const isHit = i >= hit.offset && i < hit.endOffset;
+      out += (isHit ? '[' + byteToHex(arr[i]) + ']' : byteToHex(arr[i])) + ' ';
+      if ((i - start + 1) % 16 === 0 && i < end - 1) out += '\n  ';
+    }
+    out += '\n';
+
+    // UTF-8
+    let utf8Str = '';
+    for (let i = start; i < end; i++) utf8Str += byteToChar(arr[i]);
+    out += '  UTF-8: ' + utf8Str + '\n\n';
+  }
+
+  const blob = new Blob([out], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (fileName || 'assetindexer') + '_bytefind.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+});
+</script>
+
+</body>
+</html>
